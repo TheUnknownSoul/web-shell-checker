@@ -7,7 +7,7 @@ and parses response, creates files with working and not working
 ## Usage 
 Install dependencies 
 ```
-python -r requirements.txt
+pip install -r requirements.txt
 ```
 
 Run 
