@@ -14,3 +14,9 @@ Run
 ```
 python shell-checker.py -l <path to list with web shells>
 ```
+
+To add this script to scheduler run
+```
+chmod +x checker-cron-job.sh
+sudo ./checker-cron-jib.sh
+```
