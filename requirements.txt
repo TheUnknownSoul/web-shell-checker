@@ -1,3 +1,4 @@
 requests
 pandas
 urllib3
+progress==1.6
