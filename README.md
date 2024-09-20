@@ -17,8 +17,8 @@ python shell-checker.py -l <path to list with web shells>
 
 Additional options
 ```
--debug: Optional parameter. Detailed request and response output.
--verbose: Optiuonal parameter. Prints result of what line is now in process and detailed message for current shell.
+-d: Optional parameter. Detailed request and response output.
+-v: Optiuonal parameter. Prints result of what line is now in process and detailed message for current shell.
 ```
 
 To add this script to scheduler run
@@ -36,6 +36,6 @@ First of all it ignores invalid or self-signed certificate. Second, timeout opti
 
 Retries forced also on 500, 502, 503, 504 status code.
 In some cases if amount of shell are huge and internet connection unstable implemented 5 retry for function that sends 
-request after 10 seconds of pause. For now this feature hasn't tested properly.
+request after 5 seconds of pause. For now this feature hasn't tested properly.
 
 Supports file in `.txt` and `.csv` file extension.
