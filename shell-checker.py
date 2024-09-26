@@ -116,31 +116,25 @@ def send_requests_and_check_responses(shell_url, verbose):
                             print("All necessary commands works." + reset_ascii_color)
 
                         working_shells_file.write(f"{shell_url}\n")
-                        working_shells_file.flush()
                     elif contains_uid != -1 or contains_curl_file or contains_wget_file:
                         if verbose:
                             print(ascii_red_color + "Probably not all commands working." + reset_ascii_color)
                         not_working_shells_file.write(f"{shell_url}\n")
-                        not_working_shells_file.flush()
                     else:
                         if verbose:
                             print(ascii_red_color + "Shell did not respond: " + shell_url + "\n" +
                                   "Check path to shell or shell doesn't alive." + reset_ascii_color)
                         not_working_shells_file.write(f"{shell_url}\n")
-                        not_working_shells_file.flush()
             except requests.exceptions.TooManyRedirects:
                 print("\nToo many redirects. Continue...")
                 not_working_shells_file.write(f"{shell_url}\n")
-                not_working_shells_file.flush()
 
             except urllib3.exceptions.ResponseError:
                 print("\nToo many response errors. Continue...")
                 not_working_shells_file.write(f"{shell_url}\n")
-                not_working_shells_file.flush()
             except requests.exceptions.RetryError:
                 print("\nToo many response errors. Continue...")
                 not_working_shells_file.write(f"{shell_url}\n")
-                not_working_shells_file.flush()
 
             except requests.exceptions.SSLError as exception:
                 time.sleep(5)
@@ -154,7 +148,6 @@ def send_requests_and_check_responses(shell_url, verbose):
                 else:
                     not_working_shells_file.write(f"{shell_url}\n")
                     not_working_shells_file.flush()
-                    working_shells_file.flush()
             except requests.exceptions.ConnectionError:
                 time.sleep(5)
                 if error_count_retries < 5:
@@ -170,24 +163,26 @@ def send_requests_and_check_responses(shell_url, verbose):
 
 def print_banner():
     print(ascii_purple_color)
-    print(' .---------------------------------------------------------------.' + "\n"
-          ' |      O                                                        |' + "\n"
-          ' |      |                                                        |' + "\n"               
-          ' |0{XXXX}+===================================================>   |' + "\n"  
-          ' |      |                                                        |' + "\n"
-          ' |      O                                                        |' + "\n"                                                                     
-          ' |---------------------------------------------------------------|' + "\n"                                                                     
-          ' | __        _______ ____    ____  _   _ _____ _     _     ____  |' + "\n"
-          ' | \\ \\      / / ____| __ )  / ___|| | | | ____| |   | |   / ___| |' + "\n"
-          ' |  \\ \\ /\\ / /|  _| |  _ \\  \\___ \\| |_| |  _| | |   | |   \\___ \\ |' + "\n"
-          ' |   \\ V  V / | |___| |_) |  ___) |  _  | |___| |___| |___ ___) ||' + "\n"
-          ' |   _\\_/\\_/  |_____|____/ _|____/|_| |_|_____|_____|_____|____/ |' + "\n"
-          ' |  / ___| | | | ____/ ___| |/ / ____|  _ \\                      |' + "\n"
-          " | | |   | |_| |  _|| |   | ' /|  _| | |_) |                     |" + "\n"
-          ' | | |___|  _  | |__| |___| . \\| |___|  _ <                      |' + "\n"
-          ' |  \\____|_| |_|_____\\____|_|\\_\\_____|_| \\_\\                     |' + "\n"
-          ' |                                                               |' + "\n"
-          " '---------------------------------------------------------------'")
+    print('''
+           .---------------------------------------------------------------.
+           |      O                                                        |
+           |      |                                                        |    
+           |0{XXXX}+===================================================>   |
+           |      |                                                        |
+           |      O                                                        |                                                          
+           |---------------------------------------------------------------|                                                                  
+           | __        _______ ____    ____  _   _ _____ _     _     ____  |
+           | \\ \\      / / ____| __ )  / ___|| | | | ____| |   | |   / ___| |
+           |  \\ \\ /\\ / /|  _| |  _ \\  \\___ \\| |_| |  _| | |   | |   \\___ \\ |
+           |   \\ V  V / | |___| |_) |  ___) |  _  | |___| |___| |___ ___) ||
+           |   _\\_/\\_/  |_____|____/ _|____/|_| |_|_____|_____|_____|____/ |
+           |  / ___| | | | ____/ ___| |/ / ____|  _ \\                      |
+           | | |   | |_| |  _|| |   | ' /|  _| | |_) |                     |
+           | | |___|  _  | |__| |___| . \\| |___|  _ <                      |
+           |  \\____|_| |_|_____\\____|_|\\_\\_____|_| \\_\\                     |
+           |                                                               |
+           '---------------------------------------------------------------' 
+           ''')
     print(reset_ascii_color)
 
 
