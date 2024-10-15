@@ -49,19 +49,19 @@ def parse_arguments():
 
 
 def check_status_txt_file(path, verbose):
-    with (open(path) as txt_file):
-        line_count = sum(1 for _ in txt_file)
+    with open(path) as txt_file:
+        content = txt_file.readlines()
+        line_count = sum(1 for _ in content)
         bar = FillingSquaresBar('Processing', max=line_count)
-        for line in txt_file:
+        for line in content:
             bar.next()
-            send_requests_and_check_responses(line, verbose)
+            send_requests_and_check_responses(line.strip(), verbose)
     bar.finish()
     subprocess.run(['touch', 'finished.txt'])
-    txt_file.close()
 
 
 def check_status_csv_file(path, verbose):
-    with (open(path, newline='') as csv_file):
+    with open(path, newline='') as csv_file:
         results = pandas.read_csv(csv_file, usecols=['url'])
         row_count = len(results)
         bar = FillingSquaresBar('Processing', max=row_count)
@@ -71,7 +71,6 @@ def check_status_csv_file(path, verbose):
             send_requests_and_check_responses(line, verbose)
     bar.finish()
     subprocess.run(['touch', 'finished.txt'])
-    csv_file.close()
 
 
 def send_requests_and_check_responses(shell_url, verbose):
@@ -139,7 +138,7 @@ def send_requests_and_check_responses(shell_url, verbose):
                                   "Status code: " + str(response_status))
                             print("All necessary commands works." + reset_ascii_color)
 
-                        working_shells_file.write(f"{shell_url}\n")
+                        working_shells_file.write(f"{shell_url}:query-params\n")
                     elif (contains_uid != -1 or contains_curl_file or contains_wget_file) and not is_wbo_shell and \
                             not is_p0wny_shell:
                         if verbose:
@@ -149,12 +148,12 @@ def send_requests_and_check_responses(shell_url, verbose):
                     elif is_wbo_shell and not is_p0wny_shell:
                         if verbose:
                             print(ascii_red_color + "Maybe this is WBO shell?" + reset_ascii_color)
-                        working_shells_file.write(f"{shell_url}\n")
+                        working_shells_file.write(f"{shell_url}:webshell-by-orb\n")
 
                     elif is_p0wny_shell:
                         if verbose:
                             print(ascii_red_color + "Maybe this is p0wny shell?" + reset_ascii_color)
-                        working_shells_file.write(f"{shell_url}\n")
+                        working_shells_file.write(f"{shell_url}:powny-shell\n")
                     else:
                         if verbose:
                             print(ascii_red_color + "Shell did not respond: " + shell_url + "\n" +
