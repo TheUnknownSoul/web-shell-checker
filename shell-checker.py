@@ -28,8 +28,8 @@ response_text_wget = None
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Checks shell status")
     parser.add_argument('-l', help='Path to list with web shells', required=True)
-    parser.add_argument('-d', help='Added debug mode output.', required=False)
-    parser.add_argument('-v', help='Added debug mode output.', required=False)
+    parser.add_argument('-d', help='Added debug mode output.', required=False, action='store_true')
+    parser.add_argument('-v', help='Added debug mode output.', required=False, action='store_true')
     parser.format_help()
     args = parser.parse_args()
     debug_mode = args.d
@@ -53,8 +53,11 @@ def check_status_txt_file(path, verbose):
         content = txt_file.readlines()
         line_count = sum(1 for _ in content)
         bar = FillingSquaresBar('Processing', max=line_count)
+
         for line in content:
+            print("\n")
             bar.next()
+            print("\n")
             send_requests_and_check_responses(line.strip(), verbose)
     bar.finish()
     subprocess.run(['touch', 'finished.txt'])
@@ -101,7 +104,7 @@ def send_requests_and_check_responses(shell_url, verbose):
     with open(file_with_working_shells, 'a') as working_shells_file:
         with open(file_with_not_working_shells, 'a') as not_working_shells_file:
             if verbose:
-                print(ascii_green_color + "Checking shell: " + shell_url + reset_ascii_color)
+                print(ascii_green_color + "\nChecking shell: " + shell_url + "\n" + reset_ascii_color)
 
             session = requests.Session()
             session.max_redirects = 3
