@@ -54,8 +54,10 @@ def check_status_txt_file(path, verbose):
         line_count = sum(1 for _ in content)
         bar = FillingSquaresBar('Processing', max=line_count)
 
+        bar.start()
         for line in content:
-            print("\n")
+            if verbose is True:
+                print("\n")
             bar.next()
             print("\n")
             send_requests_and_check_responses(line.strip(), verbose)
