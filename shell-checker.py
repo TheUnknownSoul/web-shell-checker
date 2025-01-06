@@ -1,9 +1,12 @@
 import argparse
 import numbers
+import os
 import subprocess
 import sys
 import time
 import logging
+from pathlib import Path
+
 from progress.bar import FillingSquaresBar
 
 import requests
@@ -11,7 +14,7 @@ import pandas
 import urllib3
 from requests.adapters import HTTPAdapter, Retry
 import http.client as http_client
-
+from urllib3.exceptions import LocationParseError
 # Suppress only the single warning from urllib3.
 urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
@@ -19,6 +22,7 @@ ascii_purple_color = "\x1b[38;5;13m"
 ascii_green_color = "\x1b[32m"
 ascii_red_color = "\x1b[1;31m"
 reset_ascii_color = "\u001B[0m"
+directory = Path(__file__).parent
 error_count_retries = 0
 response_text_id = None
 response_text_curl = None
@@ -49,33 +53,80 @@ def parse_arguments():
 
 
 def check_status_txt_file(path, verbose):
-    with open(path) as txt_file:
-        content = txt_file.readlines()
-        line_count = sum(1 for _ in content)
-        bar = FillingSquaresBar('Processing', max=line_count)
-
-        bar.start()
-        for line in content:
-            if verbose is True:
+    if check_if_files_had_been_processed():
+        process_not_finished_files()
+    else:
+        with open(path) as txt_file:
+            content = txt_file.readlines()
+            line_count = sum(1 for _ in content)
+            bar = FillingSquaresBar('Processing', max=line_count)
+            bar.start()
+            for line in content:
+                if verbose is True:
+                    print("\n")
+                bar.next()
                 print("\n")
-            bar.next()
-            print("\n")
-            send_requests_and_check_responses(line.strip(), verbose)
-    bar.finish()
-    subprocess.run(['touch', 'finished.txt'])
+                send_requests_and_check_responses(line.strip(), verbose)
+        bar.finish()
+        subprocess.run(['touch', directory / 'finished.txt'])
+        subprocess.run(['rm', directory / 'database_new.txt'])
 
 
 def check_status_csv_file(path, verbose):
-    with open(path, newline='') as csv_file:
-        results = pandas.read_csv(csv_file, usecols=['url'])
-        row_count = len(results)
-        bar = FillingSquaresBar('Processing', max=row_count)
-        for index in range(row_count - 1):
-            line = results.__array__().item(index)
-            bar.next()
-            send_requests_and_check_responses(line, verbose)
+    if check_if_files_had_been_processed():
+        process_not_finished_files()
+    else:
+        with open(path, newline='') as csv_file:
+            results = pandas.read_csv(csv_file, usecols=['url'])
+            row_count = len(results)
+            bar = FillingSquaresBar('Processing', max=row_count)
+            for index in range(row_count - 1):
+                line = results.__array__().item(index)
+                bar.next()
+                send_requests_and_check_responses(line, verbose)
+        bar.finish()
+    subprocess.run(['touch', directory / 'finished.txt'])
+    subprocess.run(['rm', directory / 'database_new.csv'])
+
+
+def check_if_files_had_been_processed():
+    directory_files = os.listdir(".")
+    for file in directory_files:
+        if file.startswith("working.txt") or file.startswith("not_working.txt"):
+            return True
+    return False
+
+
+def process_not_finished_files():
+    results = pandas.read_csv("database_new.csv", usecols=['url'], dtype=str)
+    working_shell_list = (open("working.txt", "r").readlines())
+    urls = results['url']
+    not_working_shell_list = open("not_working.txt", "r").readlines()
+    # removing suffix for lines in file
+    # removing from target list already processed urls
+    for line in working_shell_list:
+        line = (line.replace(":query-params\n", "").replace(":webshell-by-orb\n", "")
+                .replace(":powny-shell\n", ""))
+        for index in urls:
+            if line == index:
+                item_to_remove = results[results.url == line].index[0]
+                results = results.drop(item_to_remove)
+                results.to_csv("database_new.csv", index=False)
+
+    for line in not_working_shell_list:
+        for index in urls:
+            if line == index:
+                item_to_remove = results[results.url == line].index[0]
+                results = results.drop(item_to_remove)
+                results.to_csv("database_new.csv", index=False)
+
+    bar = FillingSquaresBar('Processing', max=len(urls))
+    for line in urls:
+        bar.next()
+        send_requests_and_check_responses(line, False)
     bar.finish()
-    subprocess.run(['touch', 'finished.txt'])
+    subprocess.run(['touch', directory / 'finished.txt'])
+    subprocess.run(['rm', directory / 'database_new.csv'])
 
 
 def send_requests_and_check_responses(shell_url, verbose):
@@ -100,8 +151,8 @@ def send_requests_and_check_responses(shell_url, verbose):
     p0wny_shell_logo = "shell-logo"
     p0wny_shell_content = "shell-content"
 
-    file_with_working_shells = "working.txt"
-    file_with_not_working_shells = "not_working.txt"
+    file_with_working_shells = directory / "working.txt"
+    file_with_not_working_shells = directory / "not_working.txt"
 
     with open(file_with_working_shells, 'a') as working_shells_file:
         with open(file_with_not_working_shells, 'a') as not_working_shells_file:
@@ -193,6 +244,28 @@ def send_requests_and_check_responses(shell_url, verbose):
                     error_count_retries += 1
                     print(
                         "\nConnection error or OS couldn't resolve IP address."
+                        f"Retry # {error_count_retries}")
+                    send_requests_and_check_responses(shell_url, verbose)
+                else:
+                    not_working_shells_file.flush()
+                    working_shells_file.flush()
+            except LocationParseError:
+                time.sleep(5)
+                if error_count_retries < 5:
+                    error_count_retries += 1
+                    print(
+                        "\nCould not parse location address."
+                        f"Retry # {error_count_retries}")
+                    send_requests_and_check_responses(shell_url, verbose)
+                else:
+                    not_working_shells_file.flush()
+                    working_shells_file.flush()
+            except requests.exceptions.InvalidURL:
+                time.sleep(5)
+                if error_count_retries < 5:
+                    error_count_retries += 1
+                    print(
+                        "\nInvalid URL."
                         f"Retry # {error_count_retries}")
                     send_requests_and_check_responses(shell_url, verbose)
                 else:
