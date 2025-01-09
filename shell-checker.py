@@ -54,7 +54,7 @@ def parse_arguments():
 
 def check_status_txt_file(path, verbose):
     if check_if_files_had_been_processed():
-        process_not_finished_files()
+        process_not_finished_files(verbose)
     else:
         with open(path) as txt_file:
             content = txt_file.readlines()
@@ -74,7 +74,7 @@ def check_status_txt_file(path, verbose):
 
 def check_status_csv_file(path, verbose):
     if check_if_files_had_been_processed():
-        process_not_finished_files()
+        process_not_finished_files(verbose)
     else:
         with open(path, newline='') as csv_file:
             results = pandas.read_csv(csv_file, usecols=['url'])
@@ -97,7 +97,7 @@ def check_if_files_had_been_processed():
     return False
 
 
-def process_not_finished_files():
+def process_not_finished_files(verbose):
     results = pandas.read_csv("database_new.csv", usecols=['url'], dtype=str)
     working_shell_list = (open("working.txt", "r").readlines())
     urls = results['url']
@@ -123,7 +123,7 @@ def process_not_finished_files():
     bar = FillingSquaresBar('Processing', max=len(urls))
     for line in urls:
         bar.next()
-        send_requests_and_check_responses(line, False)
+        send_requests_and_check_responses(line, verbose)
     bar.finish()
     subprocess.run(['touch', directory / 'finished.txt'])
     subprocess.run(['rm', directory / 'database_new.csv'])
